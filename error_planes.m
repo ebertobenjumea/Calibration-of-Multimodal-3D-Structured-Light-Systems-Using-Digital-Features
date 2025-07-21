@@ -1,0 +1,405 @@
+close all
+clc
+clear_ask=input('Do you want to clear the previously processed data? Yes:1  No:2\nYour answer:');
+if clear_ask==1
+    clear all
+    disp('All data was cleared')
+else
+    disp('You are working with previously processed data')
+end
+inst_ask=input('UTB or CITEDI data? UTB:1  CITEDI:2\nYour answer:');
+if inst_ask==1
+    disp('You are working with UTB data!')
+    direc='D:\R3D\2023\multimodal\Experimento 6\';
+    name_texture='P18_F25';
+elseif inst_ask==2
+    disp('You are working with CITEDI data!')
+    direc='D:\R3D\2023\multimodal\Experimento 24\';
+    name_texture='P18_F26';
+end
+
+% Input data
+n_poses=15;
+inicio=1;
+camera1='camera 1\';
+format='.PNG';
+%% Mirror corner detection and mask creation for C1
+clc
+disp('Mirror corner detection and mask creation.')
+disp(' ')
+delta=input(['If you want to reduce the mirror area,\nplease specify the number of ' ...
+    'pixels\nfrom the edge you want to remove \n(0 means no change)\n Your answer:']);
+if delta~=0
+    disp('The mirror will be reduced')
+else
+    disp('You are working with the full size of the mirror')
+end
+
+figure;
+texture_img={};
+mask={};
+mask_final={};
+corner_store={};
+disp('Pose: ')
+for i=inicio:n_poses
+    if i<11
+        aux=['0' num2str(i-1)];
+    else
+        aux=num2str(i-1);
+    end
+    disp(aux)
+    % Leemos la imagen
+    texture_img{i}=imread([direc camera1 'pose_' aux '\H\' name_texture format]);    %Accedemos a imagen de textura
+    img=texture_img{i};
+    width=size(img,2);
+    height=size(img,1);
+    % Buscamos las esquinas y la mascara via umbralziación
+    sgtitle(['Pose ' num2str(i-1)])
+    [mask{i},mask_final{i},corner_store{i}]=find_mirror_mask(img, delta, width, height,1); 
+    imwrite(mask_final{i},[direc camera1 'mask_' aux '.png'])
+    pause(0.5)
+    
+end
+close all
+
+
+
+%% Obtención de fase
+disp('Phase obtaining.')
+disp(' ')
+mode_phase=input(['If you want to obtain the phase from the images, please press 1\n' ...
+    'If you want to read the phase from previously processed .mat files, \nPress 2\n Your answer:']);
+if mode_phase==1
+    disp('Obtaining phase from images...')
+    NStep = 18;
+    NBits = 7;
+    carp=camera1;
+    fase_c1=estimate_phases(direc,carp,NStep,NBits,n_poses,width,height,format,inicio);
+    %carp=camera2;
+    %fase_c2=estimate_phases(direc,carp,NStep,NBits,n_poses,width,height,format);
+    disp('Finished!')
+elseif mode_phase==2
+    disp('Reading phase from .mat files...')
+    fase_c1={};
+
+    %fase_c2={};
+    for i=inicio:n_poses
+        if i<11, aux=['0' num2str(i-1)]; else, aux=num2str(i-1); end
+        load([direc camera1 '\camera 1_pose_' aux '_phases.mat'])
+        fase_c1{i,1}=Fx;
+        fase_c1{i,2}=Fy;
+        %load([direc camera2 '\camera 2_pose_' aux '_phases.mat'])
+        %fase_c2{i,1}=Fx;
+        %fase_c2{i,2}=Fy;
+    end
+    disp('Finished!')    
+end
+
+%Size of fase_c2: (n_poses, fx fy)
+%         fx      fy   
+%         .       .
+%         .       .   
+%         .       .
+%     n_poses   n_poses
+figure;
+for i=inicio:n_poses
+%     fase_c1{i,1}(~mask_final{i})=NaN;
+%     fase_c1{i,2}(~mask_final{i})=NaN;
+%     fase_c2{i,1}(~mask_final2{i})=NaN;
+%     fase_c2{i,2}(~mask_final2{i})=NaN;
+    title(['Pose ' num2str(i-1)])
+    subplot(121)
+    imagesc(fase_c1{i,1})
+    axis equal
+    subplot(122)
+    imagesc(fase_c1{i,2})
+    axis equal
+%     subplot(223)
+%     imagesc(fase_c2{i,1})
+%     axis equal
+%     subplot(224)
+%     imagesc(fase_c2{i,2})
+%     axis equal
+    sgtitle(['Pose ' num2str(i-1)])
+    pause(1);
+end
+
+
+%% 3D data obtaining
+addpath('C:\Users\Eberto Benjumea\Desktop\OneDrive - Universidad Tecnológica de Bolívar\Doctorado\Proyectos\Codigos Reconstruccion 3D Learning\Codes Raul Purdue\StereoCalibCodes');
+Direc='D:\R3D\2023\multimodal\Experimento 24\';  %Directorio de fases objeto
+carp='camera 1\';
+
+%load('D:\R3D\2023\Erik\Calib\CAlib_TSC_0_3.mat') % Directorio de archivo de calibración
+%load('D:\R3D\2023\udc\Pruebas-22-08-09\Estereo1\Estereo1_TSC_0_4.mat')  %Calibración Udc
+load('D:\R3D\2023\multimodal\Experimento 21\Calib_TSC_0_3.mat'); % Directorio de archivo de calibración
+n_r3d=n_poses;
+
+%Mask=imread([Direc 'mask_pose_04.png']);
+%Mask=ones(1536,2048);
+%Mask=zeros(1536,2048);
+%Mask(300:900, 450:850)=1;
+%Mask(300:900, 80:560)=1;
+%figure; imshow(Mask)
+%Mask=ones(1024,1280);
+%Mask=ones(1200,1920);
+
+%Mask=zeros(1024,1280);
+%Mask(340:550, 320:600)=1;
+%Mask(340:650, 320:700)=1;
+
+%figure; imshow(Mask)
+%Mask=imread([Direc carp 'mask_erik.png']);
+%figure; imshow(Mask)
+suave=1;
+flag_rgb=0;
+
+for i=inicio-1:n_r3d-1
+    disp(['Pose ' num2str(i)])
+    if i<10
+        name_phase=[Direc carp carp(:,1:end-1) '_pose_0' num2str(i) '_phases.mat'];
+        Mask=imread([Direc carp 'mask_0' num2str(i) '.png']);
+        %Mask=imread([Direc carp 'mask_pose_08' '.png']);
+    else
+        name_phase=[Direc carp carp(:,1:end-1) '_pose_' num2str(i) '_phases.mat'];
+        Mask=imread([Direc carp 'mask_' num2str(i) '.png']);
+        %Mask=imread([Direc carp 'mask_pose_08' '.png']);
+    end
+    load(name_phase)
+    fx=Fx;
+    fy=Fy;
+    FringePitch=18;
+    typeCalib=3;
+    Fd='Fy';
+    
+
+
+
+
+    %Mask=ones(1024,1280);
+    [XcM,YcM,ZcM,t1]=StereoReconstruction(fx,fy,Mask,FringePitch,StereoParams,typeCalib,Fd);
+    ZcM=-ZcM;
+
+
+    if suave==1
+        %ZcM=imresize(ZcM,1,'bilinear');
+        ZcM=remove_peaks(ZcM);
+        %ZcM = imgaussfilt(ZcM);
+        
+        ZcM=medfilt2(ZcM,[9 9]);
+
+    end
+     figure;
+%     masknan=isnan(ZcM);
+%     imshow(masknan)
+%     figure;
+%     %M = median(A)
+%     ZcM(masknan)=-500;
+%     ZcM=medfilt2(ZcM,[11 11]);
+    if flag_rgb==0
+        s = surf(XcM,YcM,ZcM,'FaceColor', 'interp',...
+                        'EdgeColor', 'none',...
+                        'FaceLighting', 'phong');
+    
+        view(-160,80)
+            set(gca, 'DataAspectRatio', [1, 1, 1])
+            axis equal;
+            view(0, 90);
+            camlight right
+            axis on
+            grid on
+            xlabel('x')
+            ylabel('y')
+            zlabel('z')
+    else
+
+        warp(XcM,YcM,ZcM,images);
+    
+        view(-160,80)
+            set(gca, 'DataAspectRatio', [1, 1, 1])
+            axis equal;
+            view(0, 90);
+            %camlight right
+            %axis off
+            grid off
+            xlabel('x')
+            ylabel('y')
+            zlabel('z')
+    end
+    
+    pause(1)
+    if suave==0
+        if i<10
+            name_data=[Direc carp 'r3d_pose_0' num2str(i) '.mat'];
+        else
+            name_data=[Direc carp 'r3d_pose_' num2str(i) '.mat'];
+        end
+        save(name_data,'XcM','YcM','ZcM','images','t1')
+
+    else
+        if i<10
+            name_data=[Direc carp 'r3d_smooth_pose_0' num2str(i) '.mat'];
+        else
+            name_data=[Direc carp 'r3d_smooth_pose_' num2str(i) '.mat'];
+        end
+        save(name_data,'XcM','YcM','ZcM','images','t1')
+
+    end
+
+end
+
+
+
+
+%% 
+close all
+clc
+figure();
+
+%n_poses=50;
+error_rms=[];
+for i=inicio:n_poses
+    disp(['Pose ' num2str(i-1)])
+    if i<11
+        aux=['0' num2str(i-1)];
+    else
+        aux=num2str(i-1);
+    end
+    
+    load([direc camera1 'r3d_smooth_pose_' aux '.mat'])
+    width=size(ZcM,2);
+    height=size(ZcM,1);
+    subplot(231)
+    s = surf(XcM,YcM,ZcM,'FaceColor', 'interp',...
+                    'EdgeColor', 'none',...
+                    'FaceLighting', 'phong');
+
+    set(gca, 'DataAspectRatio', [1, 1, 1])
+    axis equal;
+    view(30,30);
+    camlight right
+    axis on
+    grid on
+    xlabel('x')
+    ylabel('y')
+    zlabel('z')
+    title('3D data')
+    
+    subplot(233)
+    imagesc(ZcM)
+    colorbar
+    title('Z')
+% 
+%     sum(sum(isnan(XcM)))
+%     sum(sum(isnan(YcM)))
+%     sum(sum(isnan(ZcM)))
+%     x=XcM(:);
+%     y=YcM(:);
+    [x,y]=meshgrid(1:width,1:height);
+    x=x(:);
+    y=y(:);
+    z=ZcM(:);
+    map_z=~isnan(z);
+    x_n=x(map_z);
+    y_n=y(map_z);
+    z_n=z(map_z);
+%     sum(sum(isnan(x_n)))
+%     sum(sum(isnan(y_n)))
+%     sum(sum(isnan(z_n)))
+
+    DM = [x_n, y_n, ones(size(z_n))];                             % Design Matrix
+                                            % Estimate Parameters
+    %B=pinv(DM,z_n);
+    B=lsqminnorm(DM,z_n,'warn');
+    z_hat = B(1)*x_n + B(2)*y_n + B(3)*ones(size(x_n));
+    error=z_hat-z_n;
+    %map_error=reshape(error,[height,width]);
+
+%      subplot(235)
+%      plot(error,'.')
+%      title('Error')
+
+
+
+
+%     subplot(223)
+%     plot(z_n,'.')
+%     subplot(224)
+%     plot(z_hat,'.')
+    z_est=double(isnan(z));
+    z_est(z_est==1)=NaN;
+    %z_est=z;
+    error_2d=z;
+    cnt_data=0;
+    m_mask=zeros(size(z));
+    for j=1:length(z_est)
+        if ~isnan(z_est(j))
+            cnt_data=cnt_data+1;
+            z_est(j)=z_hat(cnt_data);
+            error_2d(j)=error(cnt_data);
+            m_mask(j)=1;
+        end
+    end
+    map_error=reshape(error_2d,[height,width]);
+    z_est=reshape(z_est,[height,width]);
+
+    subplot(232)
+    s = surf(XcM,YcM,z_est,'FaceColor', 'interp',...
+                    'EdgeColor', 'none',...
+                    'FaceLighting', 'phong');
+
+    set(gca, 'DataAspectRatio', [1, 1, 1])
+    axis equal;
+    view(30,30);
+    camlight right
+    axis on
+    grid on
+    xlabel('x')
+    ylabel('y')
+    zlabel('z')
+    title('3D ideal plane')
+
+    subplot(235)
+    s = surf(map_error,'FaceColor', 'interp',...
+                    'EdgeColor', 'none',...
+                    'FaceLighting', 'phong');
+
+    subplot(236)
+    imagesc(map_error)
+    colorbar
+    title('Z error')
+
+    subplot(234)
+    m_mask=reshape(m_mask,[height,width]);
+    imshow(m_mask)
+    histogram(error)
+    title('Hist')
+    %imhist(map_error)
+    sgtitle(['Pose ' num2str(i-1)])
+    error_rms(i)=sqrt((sum(error.^2))/length(error));
+    disp(['RMSE: ' num2str(error_rms(i))])
+    pause(1);
+
+end
+figure;
+plot(error_rms)
+xlabel('Pose')
+ylabel('RMSE')
+title('RMSE')
+
+mean_error=mean(error_rms(inicio:n_poses));
+desv=std(error_rms(inicio:n_poses));
+disp(['RMSE= ' num2str(mean_error) '±' num2str(desv)])
+
+figure; 
+    s = surf(map_error,'FaceColor', 'interp',...
+                    'EdgeColor', 'none',...
+                    'FaceLighting', 'phong');
+figure; 
+    s = surf(Fx,'FaceColor', 'interp',...
+                    'EdgeColor', 'none',...
+                    'FaceLighting', 'phong');
+
+
+    figure;
+    plot(Fy(600,400:1000))

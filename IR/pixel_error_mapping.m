@@ -1,0 +1,765 @@
+close all
+clc
+clear all
+direc='D:\R3D\Adquisiciones\Experimento 54\Objects\SL\';
+aux=num2str(3);
+% Cargamos digital features image
+pc_dig = pcread([direc 'Digital Features 1 UTB\new_obj_vis_ir_0' aux '.ply']);
+figure;
+
+pcshow(pc_dig,'BackgroundColor','w');
+xlabel('x (mm)')
+ylabel('y (mm)')
+zlabel('z (mm)')
+c = colorbar; 
+c.Label.String = '° C';
+set(gca, 'Zdir', 'reverse')
+set(gca, 'Xdir', 'reverse')
+view(30,45)
+grid off
+%zlim([350 430])
+%title('Digital features I')
+
+% Cargamos traditional image
+pc_trad = pcread([direc 'Two Stages 2\new_obj_vis_ir_0' aux '.ply']);
+figure;
+pcshow(pc_trad,'BackgroundColor','w');
+xlabel('x (mm)')
+ylabel('y (mm)')
+zlabel('z (mm)')
+c = colorbar; 
+c.Label.String = '° C';
+set(gca, 'Zdir', 'reverse')
+set(gca, 'Xdir', 'reverse')
+view(30,45)
+
+grid off
+%zlim([350 430])
+title('Traditional')
+
+
+%% Creamos matrices de información
+% Digital features I
+x_dig=pc_dig.Location(:,1);
+y_dig=pc_dig.Location(:,2);
+z_dig=pc_dig.Location(:,3);
+t_dig=pc_dig.Intensity;
+%[X_dig,Y_dig]=meshgrid([min(x_dig):0.05:max(x_dig)], [min(y_dig):0.05:max(y_dig)]);
+
+[X_dig,Y_dig]=meshgrid(linspace(min(x_dig),max(x_dig),1280), linspace(min(y_dig),max(y_dig),1024));
+
+
+
+z_est_dig=griddata(x_dig,y_dig,z_dig,X_dig,Y_dig,'cubic');
+t_est_dig=griddata(x_dig,y_dig,t_dig,X_dig,Y_dig,'cubic');
+z_est_dig(z_est_dig>max(z_dig))=NaN;
+t_est_dig(t_est_dig>max(t_dig))=NaN;
+z_est_dig(z_est_dig<min(z_dig))=NaN;
+t_est_dig(t_est_dig<min(t_dig))=NaN;
+
+% Visualización de imagenes 3D y térmicas
+figure;
+subplot(121)
+imagesc(z_est_dig)
+colorbar
+axis equal
+subplot(122)
+imagesc(t_est_dig)
+c = colorbar; 
+c.Label.String = '° C';
+axis equal
+
+% Visualizacion 3D
+figure;
+s = surf(-X_dig,Y_dig,-z_est_dig,'FaceColor', 'interp',...
+            'EdgeColor', 'none',...
+            'FaceLighting', 'phong');
+
+
+set(gca, 'DataAspectRatio', [1, 1, 1])
+axis equal;
+view(180,90);
+camlight right
+axis on
+grid on
+xlabel('x (mm)')
+ylabel('y (mm)')
+zlabel('z (mm)')
+
+
+
+
+disp('Cantidad de datos NaN:')
+sum(sum(isnan(z_est_dig))) % Ojo con esto
+sum(sum(isnan(t_est_dig))) % Ojo con esto
+
+% aux_t_est=t_est;
+% mean_t_est=mean(mean(t_est,"omitnan"),"omitnan");
+% aux_t_est(isnan(t_est))=mean_t_est;
+% 
+% aux_z_est=z_est;
+% mean_z_est=mean(mean(z_est,"omitnan"),"omitnan");
+% aux_z_est(isnan(z_est))=mean_z_est;
+% 
+% sum(sum(isnan(aux_z_est))) % Ojo con esto
+% sum(sum(isnan(aux_t_est))) % Ojo con esto
+% save('datos_mapeo.mat',"aux_t_est","aux_z_est","X","Y")
+
+% Traditional
+x_trad=pc_trad.Location(:,1);
+y_trad=pc_trad.Location(:,2);
+z_trad=pc_trad.Location(:,3);
+t_trad=pc_trad.Intensity;
+%[X_trad,Y_trad]=meshgrid([min(x_trad):0.05:max(x_trad)], [min(y_trad):0.05:max(y_trad)]);
+[X_trad,Y_trad]=meshgrid(linspace(min(x_trad),max(x_trad),1280), linspace(min(y_trad),max(y_trad),1024));
+
+
+
+z_est_trad=griddata(x_trad,y_trad,z_trad,X_trad,Y_trad,'cubic');
+t_est_trad=griddata(x_trad,y_trad,t_trad,X_trad,Y_trad,'cubic');
+z_est_trad(z_est_trad>max(z_trad))=NaN;
+t_est_trad(t_est_trad>max(t_trad))=NaN;
+z_est_trad(z_est_trad<min(z_trad))=NaN;
+t_est_trad(t_est_trad<min(t_trad))=NaN;
+
+% Visualización de imagenes 3D y térmicas
+figure;
+subplot(121)
+imagesc(z_est_trad)
+colorbar
+axis equal
+subplot(122)
+imagesc(t_est_trad)
+c = colorbar; 
+c.Label.String = '° C';
+axis equal
+
+% Visualizacion 3D
+figure;
+s = surf(-X_trad,Y_trad,-z_est_trad,'FaceColor', 'interp',...
+            'EdgeColor', 'none',...
+            'FaceLighting', 'phong');
+
+
+set(gca, 'DataAspectRatio', [1, 1, 1])
+axis equal;
+view(180,90);
+camlight right
+axis on
+grid on
+xlabel('x (mm)')
+ylabel('y (mm)')
+zlabel('z (mm)')
+
+
+disp('Cantidad de datos NaN:')
+sum(sum(isnan(z_est_trad))) % Ojo con esto
+sum(sum(isnan(t_est_trad))) % Ojo con esto
+aux_z_est_dig=uint16(z_est_dig);
+
+%save('datos_mapeo1.mat',"t_est_dig","z_est_dig","X_dig","Y_dig")
+%save('datos_mapeo2.mat',"t_est_trad","z_est_trad","X_trad","Y_trad")
+%% Entre imagenes
+figure;
+subplot(221)
+imagesc(z_est_trad)
+title('Z trad')
+subplot(222)
+imagesc(z_est_dig)
+title('Z dig')
+subplot(223)
+imagesc(t_est_trad)
+title('t trad')
+subplot(224)
+imagesc(t_est_dig)
+title('t dig')
+
+%%
+close all
+t_est_trad_copy=t_est_trad;
+figure; 
+imshow(t_est_trad,[])
+B = sort(t_est_trad(:));
+C = unique(B);
+t_est_trad(isnan(t_est_trad))=C(2); %mean(mean(t_sin_perfil,"omitnan"),"omitnan");
+t_est_trad(t_est_trad==0)=C(2); %mean(mean(t_sin_perfil,"omitnan"),"omitnan");
+
+X=t_est_trad;
+Xmin = min(X(:));
+Xmax = max(X(:));
+if isequal(Xmax,Xmin)
+    X = 0*X;
+else
+    X = (X - Xmin) ./ (Xmax - Xmin);
+end
+
+% Threshold image - adaptive threshold
+BW = imbinarize(X, 'adaptive', 'Sensitivity', 0.500000, 'ForegroundPolarity', 'bright');
+figure; imshow(BW)
+% Open mask with disk
+radius = 10;
+decomposition = 0;
+se = strel('disk', radius, decomposition);
+a = imopen(BW, se);
+
+% Threshold image - adaptive threshold
+figure; imshow(a)
+[mask_w_w,numWhite] = bwlabel(a);
+mask_w_w = bwareaopen(mask_w_w,10000);  %Retirando manchas blancas
+figure; imshow(mask_w_w)
+
+%a=(imbinarize(t_sin_perfil));
+a=mask_w_w ;
+b= ~bwareaopen(a,25000);   %Retirando manchas negras
+a=logical(a.*b);
+ figure; 
+ imshow(a,[])
+% [puntos, radii, metric] = imfindcircles(a,[50 70],'ObjectPolarity','bright',Sensitivity=0.9);
+% figure;
+% imagesc(a)
+% hold on
+% plot(puntos(:,1),puntos(:,2),'ok')
+% viscircles(puntos,radii)
+
+figure;
+imagesc(t_est_trad)
+c = colorbar; 
+c.Label.String = '° C';
+stats = regionprops("table",a,"Centroid", ...
+    "MajorAxisLength","MinorAxisLength")
+centers_t_trad = stats.Centroid;
+diameters = mean([stats.MajorAxisLength stats.MinorAxisLength],2);
+radii_t = diameters/2;
+hold on
+%viscircles(centers_t_trad,radii_t,'LineStyle','--','LineWidth',1,'Color','Black')
+plot(centers_t_trad(:,1),centers_t_trad(:,2),'+k')
+
+%%
+close all
+t_est_dig_copy=t_est_dig;
+figure; 
+imshow(t_est_dig,[])
+B = sort(t_est_dig(:));
+C = unique(B);
+t_est_dig(isnan(t_est_dig))=C(2); %mean(mean(t_sin_perfil,"omitnan"),"omitnan");
+t_est_dig(t_est_dig==0)=C(2); %mean(mean(t_sin_perfil,"omitnan"),"omitnan");
+
+X=t_est_dig;
+Xmin = min(X(:));
+Xmax = max(X(:));
+if isequal(Xmax,Xmin)
+    X = 0*X;
+else
+    X = (X - Xmin) ./ (Xmax - Xmin);
+end
+
+% Threshold image - adaptive threshold
+BW = imbinarize(X, 'adaptive', 'Sensitivity', 0.500000, 'ForegroundPolarity', 'bright');
+figure; imshow(BW)
+% Open mask with disk
+radius = 10;
+decomposition = 0;
+se = strel('disk', radius, decomposition);
+a = imopen(BW, se);
+
+% Threshold image - adaptive threshold
+figure; imshow(a)
+[mask_w_w,numWhite] = bwlabel(a);
+mask_w_w = bwareaopen(mask_w_w,9000);  %Retirando manchas blancas
+figure; imshow(mask_w_w)
+
+%a=(imbinarize(t_sin_perfil));
+ a=mask_w_w ;
+% b= ~bwareaopen(a,12000);   %Retirando manchas negras
+% a=logical(a.*b);
+ figure; 
+ imshow(a,[])
+% [puntos, radii, metric] = imfindcircles(a,[50 70],'ObjectPolarity','bright',Sensitivity=0.9);
+% figure;
+% imagesc(a)
+% hold on
+% plot(puntos(:,1),puntos(:,2),'ok')
+% viscircles(puntos,radii)
+
+figure;
+imagesc(t_est_dig)
+c = colorbar; 
+c.Label.String = '° C';
+stats = regionprops("table",a,"Centroid", ...
+    "MajorAxisLength","MinorAxisLength")
+centers_t_dig = stats.Centroid;
+diameters = mean([stats.MajorAxisLength stats.MinorAxisLength],2);
+radii_dig = diameters/2;
+hold on
+%viscircles(centers_t_dig,radii_dig,'LineStyle','--','LineWidth',1,'Color','Black')
+plot(centers_t_dig(:,1),centers_t_dig(:,2),'+k')
+
+%%
+% figure;
+% imagesc(a)
+% [x, y] = ginput();        % Sin argumento → número indefinido de clics
+% coords = [x, y];          % Matriz N×2:  [columna  fila]  (= [u  v])
+% coords=round(coords)
+% hold on
+% plot(coords(:,1),coords(:,2),'*')
+% z_data=z_est_dig(coords(:,2),coords(:,1));
+% x_data=X_dig(coords(:,2),coords(:,1));
+% y_data=Y_dig(coords(:,2),coords(:,1));
+% 
+% z_primary=griddata(x_data,y_data,z_data,X_dig,Y_dig,'cubic');
+% 
+% % Visualizacion 3D
+% figure;
+% s = surf(-X_dig,Y_dig,-z_est_dig,'FaceColor', 'interp',...
+%             'EdgeColor', 'none',...
+%             'FaceLighting', 'phong');
+% 
+% 
+% set(gca, 'DataAspectRatio', [1, 1, 1])
+% axis equal;
+% view(180,90);
+% camlight right
+% axis on
+% grid on
+% xlabel('x (mm)')
+% ylabel('y (mm)')
+% zlabel('z (mm)')
+% 
+% hold on
+% 
+% s = surf(-X_dig,Y_dig,-z_primary,'FaceColor', 'r',...
+%             'EdgeColor', 'none',...
+%             'FaceLighting', 'phong');
+
+% 
+% diff_z=z_est_dig-z_primary;
+% figure;
+% imagesc(diff_z)
+% diff=imadjust(diff_z);
+% imagesc(diff_z)
+% diff_z=uint8(diff_z);
+
+%%
+
+close all
+figure;
+imagesc(t_est_trad_copy)
+hold on
+for i=1:size(centers_t_trad,1)
+    plot(centers_t_trad(i,1),centers_t_trad(i,2),'+b')
+    plot(centers_t_dig(i,1),centers_t_dig(i,2),'xk')
+    %rms_t=norm(centers_t-centers_dig)
+    pause(0.1);
+end
+rms_t=(sum(vecnorm(centers_t_trad-centers_t_dig,2,2)))/size(centers_t_trad,1);
+
+
+errormapt=NaN.*ones(size(t_est_trad_copy));
+error_pixel=vecnorm(centers_t_trad-centers_t_dig,2,2);
+for i=1:size(centers_t_trad,1)
+    errormapt(floor(centers_t_trad(i,2)),floor(centers_t_trad(i,1)))=error_pixel(i);
+end
+figure; imagesc(errormapt)
+colorbar
+
+figure;
+stem(error_pixel,'ob')
+
+
+[x_error,y_error]=meshgrid(1:1280,1:1024);
+x_error=x_error(:);
+y_error=y_error(:);
+errormapt_interpol= griddata(double(centers_t_trad(:,1)),double(centers_t_trad(:,2)),error_pixel,double(x_error),double(y_error),"cubic");
+figure; imagesc(reshape(errormapt_interpol,[1024, 1280]))
+colorbar
+
+
+figure;
+imagesc(t_est_trad_copy-t_est_dig_copy)
+colorbar
+
+%%
+
+X_digcell={};
+Y_digcell={};
+z_est_digcell={};
+t_est_digcell={};
+X_tradcell={};
+Y_tradcell={};
+z_est_tradcell={};
+t_est_tradcell={};
+
+X_digcell{1}=X_dig;
+Y_digcell{1}=Y_dig;
+z_est_digcell{1}=z_est_dig;
+t_est_digcell{1}=t_est_dig;
+X_tradcell{1}=X_trad;
+Y_tradcell{1}=Y_trad;
+z_est_tradcell{1}=z_est_trad;
+t_est_tradcell{1}=t_est_trad;
+
+
+for i=1:length(z_est_digcell)
+
+    mean_dig=mean(mean(z_est_digcell{i},'omitnan'),'omitnan');
+    mean_trad=mean(mean(z_est_tradcell{i},'omitnan'),'omitnan');
+
+    z_dig_norm=z_est_digcell{i}-mean_dig;
+    z_trad_norm=z_est_tradcell{i}-mean_trad;
+
+    sum(sum(isnan(z_dig_norm)))
+    sum(sum(isnan(z_trad_norm)))
+
+    %figure, imshow(mask_dig)
+    difference=z_dig_norm-z_trad_norm;
+    mask_dig=isnan(difference);
+    dif=(sum(sum((difference).^2,"omitnan"),"omitnan"))/length(difference(~isnan(difference)));
+    rmse_z(i)=sqrt(dif);
+
+
+
+    mean_dig=mean(mean(t_est_digcell{i},'omitnan'),'omitnan');
+    mean_trad=mean(mean(t_est_tradcell{i},'omitnan'),'omitnan');
+
+    t_dig_norm=t_est_digcell{i}-mean_dig;
+    t_trad_norm=t_est_tradcell{i}-mean_trad;
+
+    sum(sum(isnan(t_dig_norm)))
+    sum(sum(isnan(t_trad_norm)))
+
+    %figure, imshow(mask_dig)
+    difference=t_dig_norm-t_trad_norm;
+    mask_dig=isnan(difference);
+    dif=(sum(sum((difference).^2,"omitnan"),"omitnan"))/length(difference(~isnan(difference)));
+    rmse_t(i)=sqrt(dif);
+end
+
+figure;
+plot(rmse_t,'-ob')
+xlim([0 14])
+xlabel('Poses')
+ylabel('RMSE (° C)')
+yl = yline(mean(rmse_t),'--',{'Mean: ', [num2str(round(mean(rmse_t),2)) ' mm.']},'LabelVerticalAlignment','top','LineWidth',1);
+yl.FontSize = 7;
+
+%% Solicitado Prof. Marrugo - Error RMS en x
+close all
+figure;
+detrend_z_est_digcell={};
+detrend_t_est_digcell={};
+for i=1:length(z_est_digcell)
+    imagesc(z_est_digcell{i})
+    for j=1:size(z_est_digcell{i},2)
+        mean_dig=mean(z_est_digcell{i}(:,j),'omitnan');
+        aux_dig=z_est_digcell{i}(:,j)-mean_dig;
+        [z_est_final,t_est_final]=detrend_profile_y(aux_dig, t_est_digcell{i}(:,j));
+        detrend_z_est_digcell{i}(:,j)=z_est_final;
+        detrend_t_est_digcell{i}(:,j)=t_est_final;        
+
+    end
+    imagesc(detrend_z_est_digcell{i})
+    title(['Pose ' num2str(i)])
+end
+
+figure;
+detrend_z_est_tradcell={};
+detrend_t_est_tradcell={};
+for i=1:length(z_est_tradcell)
+    imagesc(z_est_tradcell{i})
+    for j=1:size(z_est_tradcell{i},2)
+        mean_trad=mean(z_est_tradcell{i}(:,j),'omitnan');
+        aux_trad=z_est_tradcell{i}(:,j)-mean_trad;
+        [z_est_final,t_est_final]=detrend_profile_y(aux_trad, t_est_tradcell{i}(:,j));
+        detrend_z_est_tradcell{i}(:,j)=z_est_final;
+        detrend_t_est_tradcell{i}(:,j)=t_est_final;        
+
+    end
+    imagesc(detrend_z_est_tradcell{i})
+    title(['Pose ' num2str(i)])
+    pause(0.5);
+end
+
+for i=1:length(detrend_z_est_tradcell)
+
+    mean_dig=mean(mean(detrend_z_est_digcell{i},'omitnan'),'omitnan');
+    mean_trad=mean(mean(detrend_z_est_tradcell{i},'omitnan'),'omitnan');
+
+    z_dig_norm=detrend_z_est_digcell{i};%-mean_dig;
+    z_trad_norm=detrend_z_est_tradcell{i};%-mean_trad;
+
+
+
+    %figure, imshow(mask_dig)
+    difference=z_dig_norm-z_trad_norm;
+    mask_dig=isnan(difference);
+    dif=(sum(sum((difference).^2,"omitnan"),"omitnan"))/length(difference(~isnan(difference)));
+    rmse_z(i)=sqrt(dif);
+
+
+
+    mean_dig=mean(mean(detrend_t_est_digcell{i},'omitnan'),'omitnan');
+    mean_trad=mean(mean(detrend_t_est_tradcell{i},'omitnan'),'omitnan');
+
+    t_dig_norm=detrend_t_est_digcell{i};%-mean_dig;
+    t_trad_norm=detrend_t_est_tradcell{i};%-mean_trad;
+
+    sum(sum(isnan(t_dig_norm)))
+    sum(sum(isnan(t_trad_norm)))
+
+    %figure, imshow(mask_dig)
+    difference=t_dig_norm-t_trad_norm;
+    mask_dig=isnan(difference);
+    dif=(sum(sum((difference).^2,"omitnan"),"omitnan"))/length(difference(~isnan(difference)));
+    rmse_t(i)=sqrt(dif);
+
+%     figure;
+%     %subplot(121)
+%         s = surf(-X_tradcell{i},Y_tradcell{i},-z_trad_norm,'FaceColor', 'b',...
+%                 'EdgeColor', 'none',...
+%                 'FaceLighting', 'phong');
+%     
+%     
+%     set(gca, 'DataAspectRatio', [1, 1, 1])
+%     axis equal;
+%     view(180,90);
+%     camlight right
+%     axis on
+%     grid on
+%     xlabel('x (mm)')
+%     ylabel('y (mm)')
+%     zlabel('z (mm)')
+%     title('3D data by traditional method')
+%     hold on
+%     %subplot(122)
+%     s = surf(-X_digcell{i},Y_digcell{i},-z_dig_norm,'FaceColor', 'r',...
+%                 'EdgeColor', 'none',...
+%                 'FaceLighting', 'phong');
+%     
+%     
+%     set(gca, 'DataAspectRatio', [1, 1, 1])
+%     axis equal;
+%     view(180,90);
+%     camlight right
+%     axis on
+%     grid on
+%     xlabel('x (mm)')
+%     ylabel('y (mm)')
+%     zlabel('z (mm)')
+%     title('3D data by digital features')
+
+
+end
+%%
+close all
+figure;
+imagesc(detrend_z_est_digcell{i})
+aux_z_orig=detrend_z_est_digcell{i};
+bCanny = edge(aux_z_orig, 'canny');  % Umbrales automáticos
+figure;
+imagesc(bCanny)
+[centers_z_dig, radii, metric] = imfindcircles(bCanny,[35 150],'ObjectPolarity','dark',Sensitivity=0.928);
+figure;
+imagesc(detrend_z_est_digcell{i})
+colorbar
+hold on
+plot(centers_z_dig(:,1),centers_z_dig(:,2),'xk')
+%viscircles(centers_z_dig,radii,'LineStyle','--','LineWidth',1,'Color','Black')
+% %% Cargando
+% % Digital
+% 
+% %Detectando circulos en z
+% 
+% 
+% z_sin_perfil=detrend_z_est_tradcell{1};
+% figure;
+% imshow(z_sin_perfil,[])
+% 
+% sum(sum(isnan(z_sin_perfil))) % Ojo con esto
+% 
+% z_sin_perfil1= imadjust((z_sin_perfil));
+% figure;
+% imshow(z_sin_perfil1,[])
+% 
+% 
+% 
+% a=imbinarize(z_sin_perfil);
+% figure;
+% imshow(a)
+% 
+% figure; imagesc(a)
+% 
+% 
+% % figure;
+% % %imagesc(z_sin_perfil1)
+% % imshow(z_sin_perfil1,[])
+% % 
+% %  patternSize = [5, 7];  %[12, 18];         % [7, 21]
+% %  Pattern_type = 'asymmetric';  %'symmetric';     % asymmetric
+% %  Circ_color = 'black';           % white
+% %  puntos = detectCircleGridPoints(uint8(a),patternSize,PatternType=Pattern_type,CircleColor=Circ_color);
+% % figure;
+% % imagesc(z_sin_perfil)
+% % hold on
+% % plot(puntos(:,1),puntos(:,2),'+r')
+% 
+% [centers, radii, metric] = imfindcircles(z_sin_perfil,[40 120],'ObjectPolarity','dark',Sensitivity=0.928);
+% figure;
+% imagesc(a)
+% hold on
+% plot(centers(:,1),centers(:,2),'ok')
+% viscircles(centers,radii)
+% 
+% 
+% % aux_z_est=z_est;
+% % mean_z_est=mean(mean(z_est,"omitnan"),"omitnan");
+% % aux_z_est(isnan(z_est))=mean_z_est;
+% % %aux_z_est=histeq(aux_z_est);
+% % figure;
+% % imagesc(aux_z_est)
+% 
+% figure; imagesc(z_sin_perfil1)
+
+P1d=centers_z_dig;
+P2d=centers_t_dig;
+[idx, dist]  = knnsearch(P2d, P1d);          % vecino más próximo
+P2d_sorted    = P2d(idx,:);
+
+%--- visualizar ---
+figure;
+imagesc(detrend_t_est_digcell{i})
+hold on
+plot(P1d(:,1), P1d(:,2), 'xk');
+plot(P2d(:,1), P2d(:,2),'+k');         % sin ordenar
+%quiver(P1(:,1), P1(:,2), ...
+%       P2_sorted(:,1)-P1(:,1), P2_sorted(:,2)-P1(:,2), ...
+%       0, 'k');                             % flechas de correspondencia
+legend({'Centroids in depth map','Centroids in temperature map'});
+axis equal
+axis equal
+diff_pixel_dig=vecnorm(centers_z_dig-P2d_sorted,2,2);
+figure; plot(diff_pixel_dig)
+figure; histogram(diff_pixel_dig)
+mean(diff_pixel_dig)
+
+
+%%
+close all
+figure;
+imagesc(detrend_z_est_tradcell{i})
+aux_z_orig=detrend_z_est_tradcell{i};
+bCanny = edge(aux_z_orig, 'canny');  % Umbrales automáticos
+figure;
+imagesc(bCanny)
+[centers_z_trad, radii, metric] = imfindcircles(bCanny,[35 150],'ObjectPolarity','dark',Sensitivity=0.928);
+figure;
+imagesc(detrend_z_est_tradcell{i})
+colorbar
+hold on
+plot(centers_z_trad(:,1),centers_z_trad(:,2),'xk')
+viscircles(centers_z_trad,radii)
+P1t=centers_z_trad;
+P2t=centers_t_trad;
+
+[idx, dist]  = knnsearch(P1t, P1d);          % vecino más próximo
+P1t_sorted    = P1t(idx,:);
+P1t=P1t_sorted;
+
+
+[idx, dist]  = knnsearch(P2t, P1t);          % vecino más próximo
+P2t_sorted    = P2t(idx,:);
+
+%--- visualizar ---
+figure;
+imagesc(detrend_t_est_tradcell{i})
+hold on
+plot(P1t(:,1), P1t(:,2), 'xk');
+plot(P2t(:,1), P2t(:,2),'+k');         % sin ordenar
+%quiver(P1(:,1), P1(:,2), ...
+%       P2_sorted(:,1)-P1(:,1), P2_sorted(:,2)-P1(:,2), ...
+%       0, 'k');                             % flechas de correspondencia
+legend({'Centroids in depth map','Centroids in temperature map'});
+axis equal
+diff_pixel_trad=vecnorm(P1t-P2t_sorted,2,2);
+figure; plot(diff_pixel_trad)
+figure; histogram(diff_pixel_trad)
+mean(diff_pixel_trad)
+
+
+%%
+figure; imagesc(detrend_z_est_tradcell{i})
+hold on
+plot(P1t(:,1), P1t(:,2), 'xk');
+plot(P1d(:,1), P1d(:,2), '+k');
+colorbar
+
+% [idx, dist]  = knnsearch(P1d, P1t,'Distance','euclidean');          % vecino más próximo
+% P1d_sorted    = P1d(idx,:);
+% diff_pixel=vecnorm(P1t-P1d_sorted,2,2);
+% mean(diff_pixel)
+
+
+figure; imagesc(detrend_t_est_tradcell{i})
+hold on
+plot(P1t(:,1), P1t(:,2), 'xk');
+plot(P1d(:,1), P1d(:,2), '+k');
+colorbar
+
+% 
+% [idx, dist]  = knnsearch(P1d, P1t,'Distance','euclidean');          % vecino más próximo
+% P1d_sorted    = P1d(idx,:);
+% diff_pixel=vecnorm(P1t-P1d_sorted,2,2);
+% mean(diff_pixel)
+
+
+
+%%
+figure; plot(diff_pixel_trad)
+hold on
+plot(diff_pixel_dig)
+xlabel('Point')
+ylabel('Euclidean distance (px)')
+legend({'Conventional','Digital features'})
+
+
+%
+%% Datos de ejemplo  ---------------------------------------------
+%labels = {'Caso 1','Caso 2','Caso 3','Caso 4'};  % nombres de cada grupo
+close all
+errA   = diff_pixel_trad;               % error método A
+errB   = diff_pixel_dig;               % error método B
+
+
+% Paleta segura para daltónicos
+cA = [0.00 0.45 0.70];   % azul  (#0072B2)
+cB = [0.84 0.37 0.00];   % naranja (#D55E00)
+
+% Matriz de barras:  cada columna = 1 método
+Y = [errA(:)  errB(:)];   % 4×2  (filas = casos)
+
+% Gráfico de barras agrupadas
+figure('Color','w');
+h = bar(Y,'grouped');     % h(1): método A,  h(2): método B
+
+h(1).FaceColor = cA;
+h(2).FaceColor = cB;
+h(1).EdgeColor = 'none';
+h(2).EdgeColor = 'none';
+
+% Etiquetas de los grupos en el eje x
+%set(gca,'XTickLabel',labels,'FontSize',11);
+ylabel('Euclidean distance (px)')
+xlabel('Points')
+%title('Comparación del error entre dos métodos','FontWeight','bold');
+
+% Leyenda
+legend({'Conventional','Digital features'},'Location','northwest');
+
+% % (Opcional) Mostrar los valores encima de cada barra
+% xt = [h(1).XEndPoints; h(2).XEndPoints];
+% yt = [h(1).YEndPoints; h(2).YEndPoints];
+% vals = Y';
+% text(xt(:), yt(:)+0.004, string(vals(:)), ...
+%      'HorizontalAlignment','center','FontSize',9);
+% 
+ grid on;
+% axis tight;

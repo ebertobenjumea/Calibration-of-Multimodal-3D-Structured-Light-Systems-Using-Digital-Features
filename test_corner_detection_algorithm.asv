@@ -1,0 +1,168 @@
+close all
+clc
+clear_ask=input('Do you want to clear the previously processed data? Yes:1  No:2\nYour answer:');
+if clear_ask==1
+    clear all
+    disp('All data was cleared')
+else
+    disp('You are working with previously processed data')
+end
+inst_ask=input('UTB or CITEDI data? UTB:1  CITEDI:2\nYour answer:');
+if inst_ask==1
+    disp('You are working with UTB data!')
+    direc='D:\R3D\Adquisiciones\Experimento 54\Digital features\';
+    name_texture='P18_F26';
+elseif inst_ask==2
+    disp('You are working with CITEDI data!')
+    direc='D:\R3D\2023\multimodal\Experimento 44\Digital Features 2\';
+    %direc='D:\R3D\2023\multimodal\Experimento 18\';
+    name_texture='P18_F26';
+end
+
+% Input data
+n_poses=81;
+n_corners=6;
+camera1='camera 1\';
+camera2='camera 2\';
+IR='IR\';
+format='.PNG';
+cd('C:\Users\Eberto Benjumea\Desktop\OneDrive - Universidad Tecnológica de Bolívar\Doctorado\Proyectos\Codigos Reconstruccion 3D Learning\Codigos Tesis All Digital Features')
+%% Mirror corner detection and mask creation for C1
+clc
+disp('Mirror corner detection and mask creation.')
+disp(' ')
+
+
+figure;
+texture_img={};
+mask={};
+mask_final={};
+corner_store={};
+disp('Pose: ')
+for i=1:n_poses
+    if i<11
+        aux=['0' num2str(i-1)];
+    else
+        aux=num2str(i-1);
+    end
+    disp(aux)
+    % Leemos la imagen
+    texture_img{i}=imread([direc camera1 'pose_' aux '\H\' name_texture format]);    %Accedemos a imagen de textura
+    img=texture_img{i};
+    width=size(img,2);
+    height=size(img,1);
+    % Buscamos las esquinas y la mascara via umbralziación
+    sgtitle(['Pose ' num2str(i-1)])
+    [mask{i},corner_store{i}]=find_mirror_nmask(img, n_corners,1);
+    pause(0.5)
+    
+end
+close all
+
+
+%%
+for i=1:n_poses
+    if i<11
+        aux=['0' num2str(i-1)];
+    else
+        aux=num2str(i-1);
+    end
+    disp(aux)
+    % Leemos la imagen
+    texture_img{i}=imread([direc camera1 'pose_' aux '\H\' name_texture format]);    %Accedemos a imagen de textura
+    img=texture_img{i};
+    subplot(121)
+    imshow(img1)
+    hold on
+    plot(final_corners(:,1),final_corners(:,2),'+b');
+    subplot(122) 
+    imshow(mask,[])
+end
+%% Busqueda de mascara en C2
+figure;
+texture_img2={};
+mask2={};
+mask_final2={};
+corner_store2={};
+disp('Pose: ')
+for i=1:n_poses
+    if i<11
+        aux=['0' num2str(i-1)];
+    else
+        aux=num2str(i-1);
+    end
+    disp(aux)
+    texture_img2{i}=imread([direc camera2 'pose_' aux '\H\' name_texture format]);    %Accedemos a imagen de textura
+    img2=texture_img2{i};
+    % Buscamos las esquinas y la mascara via umbralziación
+    sgtitle(['Pose ' num2str(i-1)])
+    [mask2{i},corner_store2{i}]=find_mirror_nmask(img2, n_corners,1);
+    pause(0.5);
+end
+close all
+
+%% Muestreo de C1 y C2
+clc
+close all
+
+grid_size1=20;
+[screen_points_c1,mask_points]=points_camera(texture_img{1},grid_size1);
+grid_size2=3;
+[screen_points_c2,mask_points2]=points_camera(texture_img2{1},grid_size2);
+
+figure; 
+subplot(121)
+imshow(texture_img{1})
+hold on
+plot(screen_points_c1(:,1),screen_points_c1(:,2),'*r')
+title(['Camera 1 samples with grid size= ' num2str(grid_size1)])
+subplot(122) 
+imshow(texture_img2{1})
+hold on
+plot(screen_points_c2(:,1),screen_points_c2(:,2),'.r')
+title(['Camera 2 samples with grid size= ' num2str(grid_size2)])
+pause(3);
+
+%% Combinación de mascarás (Rectangulo y muestreo de C1)
+close all
+mask_ROI={};
+mask_final=mask;
+feature_points_c1_mirror={};
+figure;
+for i=1:length(mask_final)
+    mask_ROI{i}=mask_final{i}.*mask_points;
+    [ycoord, xcoord] = find(mask_ROI{i});
+    feature_points_c1_mirror{i}=[xcoord, ycoord];
+    subplot(121)
+    imshow(texture_img{i})
+    hold on
+    plot(feature_points_c1_mirror{i}(:,1),feature_points_c1_mirror{i}(:,2),'.r')
+    subplot(122)
+    imshow(mask_final{i})
+    hold on
+    plot(feature_points_c1_mirror{i}(:,1),feature_points_c1_mirror{i}(:,2),'.r')
+    pause(0.5);
+end
+close all
+
+%% Combinación de mascarás (Rectangulo y muestreo de C2)
+close all
+mask_ROI2={};
+mask_final2=mask2;
+feature_points_c2_mirror={};
+figure;
+for i=1:length(mask_final)
+    mask_ROI2{i}=mask_final2{i}.*mask_points2;
+    [ycoord, xcoord] = find(mask_ROI2{i});
+    feature_points_c2_mirror{i}=[xcoord, ycoord];
+    subplot(121)
+    imshow(texture_img2{i})
+    hold on
+    plot(feature_points_c2_mirror{i}(:,1),feature_points_c2_mirror{i}(:,2),'.r')
+    subplot(122)
+    imshow(mask_final2{i})
+    hold on
+    plot(feature_points_c2_mirror{i}(:,1),feature_points_c2_mirror{i}(:,2),'.r')
+    pause(0.5);
+end
+close all
